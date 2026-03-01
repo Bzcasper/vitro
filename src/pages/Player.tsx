@@ -8,7 +8,7 @@ import Balatro from '../components/Balatro';
 import { CastButton } from '../components/CastButton';
 import { MobilePlayer } from '../components/MobilePlayer';
 import { tmdbService, type TMDBMedia, type TMDBTVShow, type TMDBEpisode } from '../services/tmdbService';
-import { getStreamUrl, getAllServers } from '../services/streamingService';
+import { getStreamUrl, getAllServers, checkAllServersHealth, getServerHealth } from '../services/streamingService';
 import { apiStorage } from '../services/apiStorageService';
 import { storageService } from '../services/storageService';
 import { cn } from '../lib/utils';
@@ -35,8 +35,19 @@ export default function Player() {
   const [episodes, setEpisodes] = useState<TMDBEpisode[]>([]);
   const [showEpisodeList, setShowEpisodeList] = useState(false);
 
+  const [serverHealthMap, setServerHealthMap] = useState<Record<string, { healthy: boolean; latency: number }>>(getServerHealth());
+
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Run health checks on mount
+  useEffect(() => {
+    checkAllServersHealth().then((results) => {
+      const map: Record<string, { healthy: boolean; latency: number }> = {};
+      for (const r of results) map[r.id] = { healthy: r.healthy, latency: r.latency };
+      setServerHealthMap(map);
+    });
+  }, []);
 
   // Track viewport for mobile detection
   useEffect(() => {
@@ -107,9 +118,9 @@ export default function Player() {
     const cacheKey = type === 'movie' ? `movie_${id}` : `tv_${id}_${selectedSeason}_${selectedEpisode}`;
     apiStorage.cacheStreamUrls(cacheKey, [{ id: selectedServerId, url }]);
 
-    // Save progress to Redis
+    // Save progress to Redis (with server memory)
     if (type === 'movie') {
-      apiStorage.saveWatchProgress({ id: Number(id), type: 'movie' });
+      apiStorage.saveWatchProgress({ id: Number(id), type: 'movie', serverId: selectedServerId });
     } else {
       const ep = episodes.find(e => e.episode_number === selectedEpisode);
       apiStorage.saveWatchProgress({
@@ -118,6 +129,7 @@ export default function Player() {
         season: selectedSeason,
         episode: selectedEpisode,
         episodeName: ep?.name,
+        serverId: selectedServerId,
       });
     }
   }, [id, type, selectedSeason, selectedEpisode, episodes, selectedServerId]);
@@ -268,22 +280,30 @@ export default function Player() {
               </button>
 
               {showServerSelector && (
-                <div className="absolute top-full mt-2 right-0 min-w-[200px] glass rounded-2xl p-3 z-50">
+                <div className="absolute top-full mt-2 right-0 min-w-[240px] glass rounded-2xl p-3 z-50">
                   <p className="text-xs text-muted-foreground mb-2 px-2">Switch if video doesn't load</p>
-                  {servers.map((server) => (
-                    <button
-                      key={server.id}
-                      onClick={() => handleServerChange(server.id)}
-                      className={cn(
-                        "tv-focusable w-full text-left px-3 py-2 rounded-lg glass-hover transition-all duration-300 text-sm flex items-center gap-2",
-                        selectedServerId === server.id && "bg-primary/30 border-primary/50"
-                      )}
-                    >
-                      <Server className="w-3 h-3" />
-                      {server.name}
-                      {selectedServerId === server.id && <span className="ml-auto text-xs text-primary">Active</span>}
-                    </button>
-                  ))}
+                  {servers.map((server) => {
+                    const health = serverHealthMap[server.id];
+                    return (
+                      <button
+                        key={server.id}
+                        onClick={() => handleServerChange(server.id)}
+                        className={cn(
+                          "tv-focusable w-full text-left px-3 py-2 rounded-lg glass-hover transition-all duration-300 text-sm flex items-center gap-2",
+                          selectedServerId === server.id && "bg-primary/30 border-primary/50"
+                        )}
+                      >
+                        <span className={cn(
+                          "w-2 h-2 rounded-full flex-shrink-0",
+                          health ? (health.healthy ? "bg-green-400" : "bg-red-400") : "bg-gray-400"
+                        )} />
+                        <Server className="w-3 h-3" />
+                        {server.name}
+                        {health?.healthy && <span className="text-xs text-muted-foreground">{health.latency}ms</span>}
+                        {selectedServerId === server.id && <span className="ml-auto text-xs text-primary">Active</span>}
+                      </button>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -347,7 +367,7 @@ export default function Player() {
                       key={streamUrl}
                       src={streamUrl}
                       className="w-full h-full"
-                      sandbox="allow-scripts allow-same-origin allow-forms allow-presentation allow-popups allow-popups-to-escape-sandbox"
+                      sandbox="allow-scripts allow-same-origin allow-forms allow-presentation allow-popups"
                       referrerPolicy="no-referrer"
                       allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
                       allowFullScreen

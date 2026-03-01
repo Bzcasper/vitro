@@ -3,9 +3,15 @@ import { supabase } from './lib/supabase';
 
 const BUCKETS = [
   {
+    name: 'downloads',
+    public: true,
+    fileSizeLimit: 50 * 1024 * 1024, // 50MB
+    allowedMimeTypes: ['video/*', 'audio/*', 'application/octet-stream'],
+  },
+  {
     name: 'videos',
     public: true,
-    fileSizeLimit: 5 * 1024 * 1024 * 1024, // 5GB
+    fileSizeLimit: 50 * 1024 * 1024, // 50MB
     allowedMimeTypes: ['video/*', 'application/octet-stream'],
   },
   {

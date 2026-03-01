@@ -110,6 +110,24 @@ class ApiStorageService {
       return null;
     }
   }
+
+  async saveTimestamp(
+    id: number,
+    type: 'movie' | 'tv',
+    timestamp: number,
+    userId?: string
+  ): Promise<void> {
+    try {
+      const params = userId ? `?userId=${encodeURIComponent(userId)}` : '';
+      await this.request(`/api/progress${params}`, {
+        method: 'POST',
+        body: JSON.stringify({ progress: { id: String(id), type, timestamp } }),
+      });
+    } catch (error) {
+      console.error('API saveTimestamp failed:', error);
+      storageService.saveTimestamp(id, type, timestamp);
+    }
+  }
 }
 
 export const apiStorage = new ApiStorageService();

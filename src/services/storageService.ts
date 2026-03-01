@@ -75,6 +75,26 @@ class StorageService {
       console.error('Error saving preferred server:', error);
     }
   }
+
+  getTimestamp(id: number, type: 'movie' | 'tv'): number | undefined {
+    const progress = this.getWatchProgress();
+    const entry = progress.find(p => p.id === id && p.type === type);
+    return entry?.timestamp;
+  }
+
+  saveTimestamp(id: number, type: 'movie' | 'tv', timestamp: number): void {
+    try {
+      const allProgress = this.getWatchProgress();
+      const existing = allProgress.find(p => p.id === id && p.type === type);
+      if (existing) {
+        existing.timestamp = timestamp;
+        existing.lastWatched = Date.now();
+        localStorage.setItem(this.PROGRESS_KEY, JSON.stringify(allProgress));
+      }
+    } catch (error) {
+      console.error('Error saving timestamp:', error);
+    }
+  }
 }
 
 export const storageService = new StorageService();

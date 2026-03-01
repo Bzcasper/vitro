@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { supabase } from './lib/supabase';
 
-const BUCKET = 'videos';
+const BUCKET = 'downloads';
 
 function cors(res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -15,8 +15,8 @@ async function ensureBucket(name: string) {
 
   await supabase.storage.createBucket(name, {
     public: true,
-    fileSizeLimit: 5 * 1024 * 1024 * 1024,
-    allowedMimeTypes: ['video/*', 'application/octet-stream'],
+    fileSizeLimit: 50 * 1024 * 1024,
+    allowedMimeTypes: ['video/*', 'audio/*', 'application/octet-stream'],
   });
 }
 

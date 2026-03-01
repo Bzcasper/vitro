@@ -131,7 +131,7 @@ export function MobilePlayer({
             key={streamUrl}
             src={streamUrl}
             className="w-full h-full"
-            sandbox="allow-scripts allow-same-origin allow-forms allow-presentation allow-popups allow-popups-to-escape-sandbox"
+            sandbox="allow-scripts allow-same-origin allow-forms allow-presentation allow-popups"
             referrerPolicy="no-referrer"
             allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
             allowFullScreen
