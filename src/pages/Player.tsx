@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, ChevronLeft, ChevronRight, Star, Calendar, Film, Tv } from 'lucide-react';
+import { ArrowLeft, ChevronLeft, ChevronRight, Star, Calendar, Film, Tv, Server, ChevronDown } from 'lucide-react';
 import Balatro from '../components/Balatro';
 import { tmdbService, type TMDBMedia, type TMDBTVShow, type TMDBEpisode } from '../services/tmdbService';
-import { getStreamUrl } from '../services/streamingService';
+import { getStreamUrl, getAllServers } from '../services/streamingService';
 import { storageService } from '../services/storageService';
 import { cn } from '../lib/utils';
 
@@ -15,11 +15,22 @@ export default function Player() {
   const [loading, setLoading] = useState(true);
   const [streamUrl, setStreamUrl] = useState('');
 
+  // Server selection
+  const servers = getAllServers();
+  const [selectedServerId, setSelectedServerId] = useState<string>(
+    () => storageService.getPreferredServer() || servers[0].id
+  );
+  const [showServerSelector, setShowServerSelector] = useState(false);
+
   // TV Show specific state
   const [selectedSeason, setSelectedSeason] = useState<number>(1);
   const [selectedEpisode, setSelectedEpisode] = useState<number>(1);
   const [episodes, setEpisodes] = useState<TMDBEpisode[]>([]);
   const [showEpisodeList, setShowEpisodeList] = useState(false);
+
+  // Refs for TV navigation
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Load media details
   useEffect(() => {
@@ -74,39 +85,62 @@ export default function Player() {
 
   // Load stream URL
   useEffect(() => {
-    const loadStream = async () => {
-      if (!id || !type) return;
+    if (!id || !type) return;
 
-      try {
-        const { url } = await getStreamUrl(
-          id,
-          type,
-          type === 'tv' ? selectedSeason : undefined,
-          type === 'tv' ? selectedEpisode : undefined
-        );
-        setStreamUrl(url);
+    const { url } = getStreamUrl(
+      id,
+      type,
+      type === 'tv' ? selectedSeason : undefined,
+      type === 'tv' ? selectedEpisode : undefined,
+      selectedServerId
+    );
+    setStreamUrl(url);
 
-        // Save progress
-        if (type === 'movie') {
-          storageService.saveWatchProgress({ id: Number(id), type: 'movie' });
-        } else {
-          const currentEpisode = episodes.find(e => e.episode_number === selectedEpisode);
-          storageService.saveWatchProgress({
-            id: Number(id),
-            type: 'tv',
-            season: selectedSeason,
-            episode: selectedEpisode,
-            episodeName: currentEpisode?.name
-          });
-        }
-      } catch (error) {
-        console.error('Error loading stream:', error);
+    // Save progress
+    if (type === 'movie') {
+      storageService.saveWatchProgress({ id: Number(id), type: 'movie' });
+    } else {
+      const currentEpisode = episodes.find(e => e.episode_number === selectedEpisode);
+      storageService.saveWatchProgress({
+        id: Number(id),
+        type: 'tv',
+        season: selectedSeason,
+        episode: selectedEpisode,
+        episodeName: currentEpisode?.name
+      });
+    }
+  }, [id, type, selectedSeason, selectedEpisode, episodes, selectedServerId]);
+
+  // Keyboard navigation for TV remotes
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't handle if iframe is focused (let the player handle it)
+      if (document.activeElement === iframeRef.current) return;
+
+      switch (e.key) {
+        case 'ArrowLeft':
+          if (type === 'tv') {
+            e.preventDefault();
+            handleEpisodeChange('prev');
+          }
+          break;
+        case 'ArrowRight':
+          if (type === 'tv') {
+            e.preventDefault();
+            handleEpisodeChange('next');
+          }
+          break;
+        case 'Escape':
+        case 'Backspace':
+          e.preventDefault();
+          navigate('/');
+          break;
       }
     };
 
-    loadStream();
-  }, [id, type, selectedSeason, selectedEpisode, episodes]);
-
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [type, episodes, selectedEpisode, navigate]);
 
   const handleEpisodeChange = useCallback((direction: 'prev' | 'next') => {
     if (type !== 'tv') return;
@@ -120,6 +154,12 @@ export default function Player() {
       setSelectedEpisode(episodes[currentIndex + 1].episode_number);
     }
   }, [type, episodes, selectedEpisode]);
+
+  const handleServerChange = useCallback((serverId: string) => {
+    setSelectedServerId(serverId);
+    storageService.setPreferredServer(serverId);
+    setShowServerSelector(false);
+  }, []);
 
   if (loading || !media) {
     return (
@@ -145,9 +185,10 @@ export default function Player() {
   const year = tmdbService.getYear(media);
   const posterUrl = tmdbService.getPosterUrl(media.poster_path);
   const currentEpisode = episodes.find(e => e.episode_number === selectedEpisode);
+  const currentServer = servers.find(s => s.id === selectedServerId);
 
   return (
-    <div className="min-h-screen w-full relative overflow-hidden">
+    <div ref={containerRef} className="min-h-screen w-full relative overflow-hidden">
       <Balatro
         color1="#667eea"
         color2="#764ba2"
@@ -159,23 +200,67 @@ export default function Player() {
       />
 
       <div className="relative z-10 min-h-screen flex flex-col p-4 sm:p-6 lg:p-8">
-        {/* Back Button */}
-        <button
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            navigate('/');
-          }}
-          className="mb-4 inline-flex items-center gap-2 glass glass-hover px-4 py-2 rounded-full w-fit transition-all duration-300 hover:scale-105"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span>Back to Home</span>
-        </button>
+        {/* Top Bar */}
+        <div className="mb-4 flex items-center justify-between gap-4 flex-wrap">
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              navigate('/');
+            }}
+            className="tv-focusable inline-flex items-center gap-2 glass glass-hover px-4 py-2 rounded-full w-fit transition-all duration-300 hover:scale-105"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Back to Home</span>
+          </button>
+
+          {/* Server Selector */}
+          <div className="relative">
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setShowServerSelector(!showServerSelector);
+              }}
+              className="tv-focusable inline-flex items-center gap-2 glass glass-hover px-4 py-2 rounded-full transition-all duration-300 hover:scale-105"
+            >
+              <Server className="w-4 h-4" />
+              <span className="text-sm">{currentServer?.name || 'Server'}</span>
+              <ChevronDown className={cn("w-4 h-4 transition-transform", showServerSelector && "rotate-180")} />
+            </button>
+
+            {showServerSelector && (
+              <div className="absolute top-full mt-2 right-0 min-w-[200px] glass rounded-2xl p-3 z-50">
+                <p className="text-xs text-muted-foreground mb-2 px-2">Switch if video doesn't load</p>
+                {servers.map((server) => (
+                  <button
+                    key={server.id}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleServerChange(server.id);
+                    }}
+                    className={cn(
+                      "tv-focusable w-full text-left px-3 py-2 rounded-lg glass-hover transition-all duration-300 text-sm flex items-center gap-2",
+                      selectedServerId === server.id && "bg-primary/30 border-primary/50"
+                    )}
+                  >
+                    <Server className="w-3 h-3" />
+                    {server.name}
+                    {selectedServerId === server.id && (
+                      <span className="ml-auto text-xs text-primary">Active</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
 
         <div className="flex-1 max-w-7xl mx-auto w-full">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Sidebar */}
-            <div className="lg:col-span-1 space-y-6">
+            <div className="lg:col-span-1 space-y-6 order-2 lg:order-1">
               {/* Media Info */}
               <div className="glass rounded-2xl p-6 space-y-4">
                 <img
@@ -226,7 +311,7 @@ export default function Player() {
                             setSelectedEpisode(1);
                           }}
                           className={cn(
-                            "px-4 py-2 rounded-lg glass glass-hover transition-all duration-300",
+                            "tv-focusable px-4 py-2 rounded-lg glass glass-hover transition-all duration-300",
                             selectedSeason === season.season_number && "bg-primary/30 border-primary/50"
                           )}
                         >
@@ -239,16 +324,19 @@ export default function Player() {
             </div>
 
             {/* Player */}
-            <div className="lg:col-span-2 space-y-6">
+            <div className="lg:col-span-2 space-y-6 order-1 lg:order-2">
               {/* Video Player */}
               <div className="glass rounded-2xl overflow-hidden">
                 <div className="relative aspect-video bg-black">
                   {streamUrl ? (
                     <iframe
+                      ref={iframeRef}
                       key={streamUrl}
                       src={streamUrl}
                       className="w-full h-full"
-                      allow="autoplay; encrypted-media"
+                      sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
+                      referrerPolicy="no-referrer"
+                      allow="autoplay; encrypted-media; fullscreen"
                       allowFullScreen
                       style={{ border: 'none' }}
                     />
@@ -268,7 +356,7 @@ export default function Player() {
                             e.stopPropagation();
                             handleEpisodeChange('prev');
                           }}
-                          className="absolute left-4 top-1/2 -translate-y-1/2 glass glass-hover p-3 rounded-full hover:scale-110 transition-all duration-300"
+                          className="tv-focusable absolute left-4 top-1/2 -translate-y-1/2 glass glass-hover p-3 rounded-full hover:scale-110 transition-all duration-300"
                         >
                           <ChevronLeft className="w-6 h-6" />
                         </button>
@@ -280,7 +368,7 @@ export default function Player() {
                             e.stopPropagation();
                             handleEpisodeChange('next');
                           }}
-                          className="absolute right-4 top-1/2 -translate-y-1/2 glass glass-hover p-3 rounded-full hover:scale-110 transition-all duration-300"
+                          className="tv-focusable absolute right-4 top-1/2 -translate-y-1/2 glass glass-hover p-3 rounded-full hover:scale-110 transition-all duration-300"
                         >
                           <ChevronRight className="w-6 h-6" />
                         </button>
@@ -314,7 +402,7 @@ export default function Player() {
                       e.stopPropagation();
                       setShowEpisodeList(!showEpisodeList);
                     }}
-                    className="w-full flex items-center justify-between mb-4"
+                    className="tv-focusable w-full flex items-center justify-between mb-4"
                   >
                     <h3 className="font-semibold text-white">Episodes ({episodes.length})</h3>
                     <ChevronRight
@@ -336,7 +424,7 @@ export default function Player() {
                             setSelectedEpisode(episode.episode_number);
                           }}
                           className={cn(
-                            "w-full text-left p-4 rounded-lg glass glass-hover transition-all duration-300",
+                            "tv-focusable w-full text-left p-4 rounded-lg glass glass-hover transition-all duration-300",
                             selectedEpisode === episode.episode_number && "bg-primary/30 border-primary/50"
                           )}
                         >

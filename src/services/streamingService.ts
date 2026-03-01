@@ -1,12 +1,15 @@
 import { STREAM_SERVERS, type StreamServer } from '../types';
 
-export async function getStreamUrl(
+export function getStreamUrl(
   tmdbId: string,
   type: 'movie' | 'tv',
   season?: number,
-  episode?: number
-): Promise<{ url: string; server: StreamServer }> {
-  const server = STREAM_SERVERS[0];
+  episode?: number,
+  serverId?: string
+): { url: string; server: StreamServer } {
+  const server = serverId
+    ? STREAM_SERVERS.find(s => s.id === serverId) ?? STREAM_SERVERS[0]
+    : STREAM_SERVERS[0];
 
   let url: string;
   if (type === 'movie') {
@@ -18,4 +21,8 @@ export async function getStreamUrl(
   }
 
   return { url, server };
+}
+
+export function getAllServers(): StreamServer[] {
+  return STREAM_SERVERS;
 }

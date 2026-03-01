@@ -345,3 +345,27 @@ h1, h2, h3, h4, h5, h6 {
   transform: translateY(-8px);
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
 }
+
+/* TV Remote / D-pad focus styles */
+.tv-focusable:focus-visible {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 4px;
+  box-shadow: 0 0 0 6px rgba(102, 126, 234, 0.3);
+}
+
+/* Make all interactive elements easier to focus on TV */
+button:focus-visible,
+a:focus-visible,
+[tabindex]:focus-visible {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 6px rgba(102, 126, 234, 0.3);
+}
+
+/* Larger touch/click targets for TV */
+@media (min-width: 1920px) {
+  .tv-focusable {
+    min-height: 48px;
+    min-width: 48px;
+  }
+}

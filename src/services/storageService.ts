@@ -2,6 +2,7 @@ import { type WatchProgress } from '../types';
 
 class StorageService {
   private readonly PROGRESS_KEY = 'vitro_watch_progress';
+  private readonly SERVER_KEY = 'vitro_preferred_server';
   private readonly MAX_HISTORY = 20;
 
   getWatchProgress(): WatchProgress[] {
@@ -56,6 +57,22 @@ class StorageService {
       localStorage.removeItem(this.PROGRESS_KEY);
     } catch (error) {
       console.error('Error clearing watch progress:', error);
+    }
+  }
+
+  getPreferredServer(): string | null {
+    try {
+      return localStorage.getItem(this.SERVER_KEY);
+    } catch {
+      return null;
+    }
+  }
+
+  setPreferredServer(serverId: string): void {
+    try {
+      localStorage.setItem(this.SERVER_KEY, serverId);
+    } catch (error) {
+      console.error('Error saving preferred server:', error);
     }
   }
 }
