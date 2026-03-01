@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, ChevronLeft, ChevronRight, Star, Calendar, Film, Tv, Server, ChevronDown } from 'lucide-react';
+import { ArrowLeft, ChevronLeft, ChevronRight, Star, Calendar, Film, Tv, Server, ChevronDown, ExternalLink, RefreshCw } from 'lucide-react';
 import Balatro from '../components/Balatro';
 import { tmdbService, type TMDBMedia, type TMDBTVShow, type TMDBEpisode } from '../services/tmdbService';
 import { getStreamUrl, getAllServers } from '../services/streamingService';
@@ -334,15 +334,46 @@ export default function Player() {
                       key={streamUrl}
                       src={streamUrl}
                       className="w-full h-full"
-                      sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
+                      sandbox="allow-scripts allow-same-origin allow-forms allow-presentation allow-popups allow-popups-to-escape-sandbox"
                       referrerPolicy="no-referrer"
-                      allow="autoplay; encrypted-media; fullscreen"
+                      allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
                       allowFullScreen
                       style={{ border: 'none' }}
                     />
                   ) : (
                     <div className="absolute inset-0 flex items-center justify-center">
                       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
+                    </div>
+                  )}
+
+                  {/* Direct play + reload for TV browsers where iframe fails */}
+                  {streamUrl && (
+                    <div className="absolute top-3 right-3 flex gap-2 z-20">
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          // Force reload the iframe
+                          const iframe = iframeRef.current;
+                          if (iframe) {
+                            iframe.src = '';
+                            setTimeout(() => { iframe.src = streamUrl; }, 100);
+                          }
+                        }}
+                        className="tv-focusable glass glass-hover p-2 rounded-full hover:scale-110 transition-all duration-300"
+                        title="Reload player"
+                      >
+                        <RefreshCw className="w-4 h-4" />
+                      </button>
+                      <a
+                        href={streamUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="tv-focusable glass glass-hover p-2 rounded-full hover:scale-110 transition-all duration-300"
+                        title="Open player directly (best for TV)"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                      </a>
                     </div>
                   )}
 
