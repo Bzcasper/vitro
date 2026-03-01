@@ -6,7 +6,7 @@ import { AnimatedLogo } from '../components/AnimatedLogo';
 import { SearchInput } from '../components/SearchInput';
 import { MediaCard } from '../components/MediaCard';
 import { tmdbService, type TMDBMedia, type TMDBGenre } from '../services/tmdbService';
-import { storageService } from '../services/storageService';
+import { apiStorage } from '../services/apiStorageService';
 import { cn } from '../lib/utils';
 
 export default function Home() {
@@ -26,7 +26,7 @@ export default function Home() {
   // Load continue watching
   useEffect(() => {
     const loadContinueWatching = async () => {
-      const progress = storageService.getWatchProgress();
+      const progress = await apiStorage.getWatchProgress();
       const media = await Promise.all(
         progress.slice(0, 10).map(async (p) => {
           try {
@@ -129,7 +129,7 @@ export default function Home() {
 
   const handleRemoveFromContinueWatching = useCallback((media: TMDBMedia) => {
     const type = media.media_type || (media.title ? 'movie' : 'tv');
-    storageService.removeWatchProgress(media.id, type);
+    apiStorage.removeWatchProgress(media.id, type);
     setContinueWatching(prev => prev.filter(m => m.id !== media.id));
   }, []);
 
@@ -169,7 +169,7 @@ export default function Home() {
       {/* Main Content */}
       <div className="relative z-10 min-h-screen flex flex-col">
         {/* Header */}
-        <header className="w-full py-8 px-4 sm:px-6 lg:px-8">
+        <header className="w-full py-4 lg:py-8 px-4 sm:px-6 lg:px-8">
           <div className="max-w-7xl mx-auto">
             {/* Logo */}
             <AnimatedLogo />
@@ -281,26 +281,27 @@ export default function Home() {
         </header>
 
         {/* Content */}
-        <main className="flex-1 w-full px-4 sm:px-6 lg:px-8 pb-12">
-          <div className="max-w-7xl mx-auto space-y-12">
-            {/* Continue Watching */}
+        <main className="flex-1 w-full px-4 sm:px-6 lg:px-8 pb-24 lg:pb-12">
+          <div className="max-w-7xl mx-auto space-y-8 lg:space-y-12">
+            {/* Continue Watching - horizontal scroll on mobile */}
             {continueWatching.length > 0 && !isSearching && (
               <section>
-                <div className="flex items-center gap-3 mb-6">
-                  <Clock className="w-6 h-6 text-primary" />
-                  <h2 className="text-2xl font-display font-bold text-white">
+                <div className="flex items-center gap-3 mb-4">
+                  <Clock className="w-5 h-5 lg:w-6 lg:h-6 text-primary" />
+                  <h2 className="text-lg lg:text-2xl font-display font-bold text-white">
                     Continue Watching
                   </h2>
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                <div className="flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory scrollbar-hide lg:grid lg:grid-cols-5 xl:grid-cols-6 lg:overflow-x-visible">
                   {continueWatching.map((media) => (
-                    <MediaCard
-                      key={media.id}
-                      media={media}
-                      onClick={() => handleMediaClick(media)}
-                      onRemove={() => handleRemoveFromContinueWatching(media)}
-                      showRemove
-                    />
+                    <div key={media.id} className="flex-shrink-0 w-[140px] sm:w-auto snap-start">
+                      <MediaCard
+                        media={media}
+                        onClick={() => handleMediaClick(media)}
+                        onRemove={() => handleRemoveFromContinueWatching(media)}
+                        showRemove
+                      />
+                    </div>
                   ))}
                 </div>
               </section>
@@ -308,11 +309,11 @@ export default function Home() {
 
             {/* Search Results or Trending */}
             <section>
-              <h2 className="text-2xl font-display font-bold text-white mb-6">
+              <h2 className="text-lg lg:text-2xl font-display font-bold text-white mb-4 lg:mb-6">
                 {isSearching ? 'Search Results' : selectedGenre ? `${selectedGenreName}` : 'Trending Now'}
               </h2>
               {displayResults.length > 0 ? (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 lg:gap-4">
                   {displayResults.map((media) => (
                     <MediaCard
                       key={media.id}
@@ -322,8 +323,8 @@ export default function Home() {
                   ))}
                 </div>
               ) : (
-                <div className="glass rounded-2xl p-12 text-center">
-                  <p className="text-muted-foreground text-lg">
+                <div className="glass rounded-2xl p-8 lg:p-12 text-center">
+                  <p className="text-muted-foreground text-base lg:text-lg">
                     {isSearching ? 'No results found' : 'Loading...'}
                   </p>
                 </div>

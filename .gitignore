@@ -29,3 +29,5 @@ yarn-error.log*
 # Temp
 .temp/
 .cache/
+.vercel
+.env*.local
