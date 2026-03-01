@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react';
-import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, ChevronLeft, ChevronRight, Download } from 'lucide-react';
 import { CastButton } from './CastButton';
 import { cn } from '../lib/utils';
 
@@ -12,6 +12,8 @@ interface MobilePlayerProps {
   onBack: () => void;
   onNext?: () => void;
   onPrev?: () => void;
+  onDownload?: () => void;
+  downloading?: boolean;
   muxPlaybackId?: string;
 }
 
@@ -22,6 +24,8 @@ export function MobilePlayer({
   onBack,
   onNext,
   onPrev,
+  onDownload,
+  downloading,
   muxPlaybackId,
 }: MobilePlayerProps) {
   const [showControls, setShowControls] = useState(true);
@@ -93,7 +97,21 @@ export function MobilePlayer({
             )}
           </div>
 
-          <CastButton streamUrl={streamUrl} />
+          <div className="flex items-center gap-2">
+            {onDownload && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDownload();
+                }}
+                disabled={downloading}
+                className="glass glass-hover p-2 rounded-full transition-all duration-300"
+              >
+                <Download className={cn('w-5 h-5', downloading && 'animate-bounce text-primary')} />
+              </button>
+            )}
+            <CastButton streamUrl={streamUrl} />
+          </div>
         </div>
       </div>
 

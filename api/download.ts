@@ -9,6 +9,17 @@ function cors(res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 }
 
+async function ensureBucket(name: string) {
+  const { data } = await supabase.storage.getBucket(name);
+  if (data) return;
+
+  await supabase.storage.createBucket(name, {
+    public: true,
+    fileSizeLimit: 5 * 1024 * 1024 * 1024,
+    allowedMimeTypes: ['video/*', 'application/octet-stream'],
+  });
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   cors(res);
 
@@ -29,6 +40,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       const storageBucket = bucket || BUCKET;
+      await ensureBucket(storageBucket);
 
       // Download the file from the remote URL
       const response = await fetch(url);
@@ -60,7 +72,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         ok: true,
         filename,
         bucket: storageBucket,
-        publicUrl: publicUrlData.publicUrl,
+        url: publicUrlData.publicUrl,
       });
     }
 
@@ -69,7 +81,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const bucket = (req.query.bucket as string) || BUCKET;
 
       if (!filename) {
-        return res.status(400).json({ error: 'Missing "filename" query parameter' });
+        // List files in bucket
+        const { data, error } = await supabase.storage.from(bucket).list('', {
+          limit: 100,
+          sortBy: { column: 'created_at', order: 'desc' },
+        });
+
+        if (error) return res.status(500).json({ error: error.message });
+
+        const files = (data || []).map((f) => ({
+          name: f.name,
+          size: f.metadata?.size,
+          type: f.metadata?.mimetype,
+          created: f.created_at,
+          url: supabase.storage.from(bucket).getPublicUrl(f.name).data.publicUrl,
+        }));
+
+        return res.status(200).json({ bucket, files });
       }
 
       const { data: publicUrlData } = supabase.storage
@@ -79,8 +107,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(200).json({
         filename,
         bucket,
-        publicUrl: publicUrlData.publicUrl,
+        url: publicUrlData.publicUrl,
       });
+    }
+
+    if (req.method === 'DELETE') {
+      const filename = req.query.filename as string | undefined;
+      const bucket = (req.query.bucket as string) || BUCKET;
+
+      if (!filename) {
+        return res.status(400).json({ error: 'Missing "filename" query parameter' });
+      }
+
+      const { error } = await supabase.storage.from(bucket).remove([filename]);
+      if (error) return res.status(500).json({ error: error.message });
+
+      return res.status(200).json({ ok: true, deleted: filename });
     }
 
     return res.status(405).json({ error: 'Method not allowed' });

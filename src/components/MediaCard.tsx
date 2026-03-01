@@ -1,5 +1,5 @@
 import { useState, memo } from 'react';
-import { Play, Star, X } from 'lucide-react';
+import { Play, Star, X, Download } from 'lucide-react';
 import { tmdbService, type TMDBMedia } from '../services/tmdbService';
 import { cn } from '../lib/utils';
 
@@ -7,10 +7,11 @@ interface MediaCardProps {
   media: TMDBMedia;
   onClick: () => void;
   onRemove?: () => void;
+  onDownload?: () => void;
   showRemove?: boolean;
 }
 
-export const MediaCard = memo(function MediaCard({ media, onClick, onRemove, showRemove = false }: MediaCardProps) {
+export const MediaCard = memo(function MediaCard({ media, onClick, onRemove, onDownload, showRemove = false }: MediaCardProps) {
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
 
@@ -56,18 +57,32 @@ export const MediaCard = memo(function MediaCard({ media, onClick, onRemove, sho
           </div>
         </div>
 
-        {/* Remove button */}
-        {showRemove && onRemove && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onRemove();
-            }}
-            className="absolute top-2 right-2 w-8 h-8 rounded-full bg-destructive/90 hover:bg-destructive flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10"
-          >
-            <X className="w-4 h-4 text-white" />
-          </button>
-        )}
+        {/* Action buttons */}
+        <div className="absolute top-2 right-2 flex flex-col gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10">
+          {showRemove && onRemove && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onRemove();
+              }}
+              className="w-8 h-8 rounded-full bg-destructive/90 hover:bg-destructive flex items-center justify-center"
+            >
+              <X className="w-4 h-4 text-white" />
+            </button>
+          )}
+          {onDownload && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onDownload();
+              }}
+              className="w-8 h-8 rounded-full glass hover:bg-primary/40 flex items-center justify-center"
+              title="Download"
+            >
+              <Download className="w-4 h-4 text-white" />
+            </button>
+          )}
+        </div>
 
         {/* Rating badge */}
         {media.vote_average > 0 && (
