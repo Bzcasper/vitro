@@ -4,7 +4,7 @@ import {
   ArrowLeft, ChevronLeft, ChevronRight, Star, Calendar,
   Film, Tv, Server, ChevronDown, ExternalLink, RefreshCw, Download
 } from 'lucide-react';
-import Balatro from '../components/Balatro';
+
 import { CastButton } from '../components/CastButton';
 import { MobilePlayer } from '../components/MobilePlayer';
 import { tmdbService, type TMDBMedia, type TMDBTVShow, type TMDBEpisode } from '../services/tmdbService';
@@ -209,7 +209,6 @@ export default function Player() {
   if (loading || !media) {
     return (
       <div className="min-h-screen w-full relative overflow-hidden flex items-center justify-center">
-        <Balatro color1="#667eea" color2="#764ba2" color3="#0f0c29" spinSpeed={5} isRotate={false} mouseInteraction={true} pixelFilter={10000} />
         <div className="relative z-10 glass p-8 rounded-2xl">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto" />
           <p className="mt-4 text-muted-foreground">Loading...</p>
@@ -243,9 +242,7 @@ export default function Player() {
   // Desktop layout
   return (
     <div ref={containerRef} className="min-h-screen w-full relative overflow-hidden">
-      <Balatro color1="#667eea" color2="#764ba2" color3="#0f0c29" spinSpeed={5} isRotate={false} mouseInteraction={true} pixelFilter={10000} />
-
-      <div className="relative z-10 min-h-screen flex flex-col p-4 sm:p-6 lg:p-8">
+      <div className="min-h-screen flex flex-col p-4 sm:p-6 lg:p-8">
         {/* Top Bar */}
         <div className="mb-4 flex items-center justify-between gap-4 flex-wrap">
           <button
@@ -335,6 +332,22 @@ export default function Player() {
                   <p className="text-sm text-muted-foreground leading-relaxed">{media.overview}</p>
                 </div>
               </div>
+              
+              {/* TV Casting Instructions */}
+              <div className="glass rounded-2xl p-4 space-y-3">
+                <h3 className="font-semibold text-white flex items-center gap-2">
+                  <Tv className="w-4 h-4" />
+                  Cast to TV
+                </h3>
+                <div className="text-sm text-muted-foreground space-y-2">
+                  <p>Click the cast button to stream to your TV:</p>
+                  <ul className="list-disc list-inside space-y-1 text-xs">
+                    <li>Chromecast: Works with Google Cast-enabled devices</li>
+                    <li>Smart TV: Uses DLNA/Presentation API</li>
+                    <li>External: Opens in new tab for manual casting</li>
+                  </ul>
+                </div>
+              </div>
 
               {type === 'tv' && 'seasons' in media && (
                 <div className="glass rounded-2xl p-6">
@@ -367,9 +380,9 @@ export default function Player() {
                       key={streamUrl}
                       src={streamUrl}
                       className="w-full h-full"
-                      sandbox="allow-scripts allow-same-origin allow-forms allow-presentation allow-popups"
+                      sandbox="allow-scripts allow-same-origin allow-forms allow-presentation allow-popups allow-storage-access-by-user-activation"
                       referrerPolicy="no-referrer"
-                      allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
+                      allow="autoplay; encrypted-media; fullscreen; picture-in-picture; web-share"
                       allowFullScreen
                       style={{ border: 'none' }}
                     />

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Film, Tv, Clock, Sparkles } from 'lucide-react';
-import Balatro from '../components/Balatro';
+
 import { AnimatedLogo } from '../components/AnimatedLogo';
 import { SearchInput } from '../components/SearchInput';
 import { MediaCard } from '../components/MediaCard';
@@ -155,17 +155,6 @@ export default function Home() {
 
   return (
     <div className="min-h-screen w-full relative overflow-hidden">
-      {/* Balatro Background */}
-      <Balatro
-        color1="#667eea"
-        color2="#764ba2"
-        color3="#0f0c29"
-        spinSpeed={5}
-        isRotate={false}
-        mouseInteraction={true}
-        pixelFilter={10000}
-      />
-
       {/* Main Content */}
       <div className="relative z-10 min-h-screen flex flex-col">
         {/* Header */}

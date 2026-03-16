@@ -64,7 +64,8 @@ function loadCastSDK(): Promise<void> {
     }
 
     // Check if script already loaded
-    if (document.querySelector(`script[src*="cast_sender"]`)) {
+    const existingScript = document.querySelector(`script[src*="cast_sender"]`);
+    if (existingScript) {
       window.__onGCastApiAvailable = (isAvailable) => {
         if (isAvailable) resolve();
       };
@@ -78,10 +79,17 @@ function loadCastSDK(): Promise<void> {
     const script = document.createElement('script');
     script.src = CAST_SCRIPT;
     script.async = true;
+    script.onerror = () => {
+      console.warn('Failed to load Chromecast SDK');
+      resolve(); // Resolve anyway for fallback
+    };
     document.head.appendChild(script);
 
-    // Timeout fallback
-    setTimeout(resolve, 5000);
+    // Timeout fallback - increased for slower networks
+    setTimeout(() => {
+      console.warn('Chromecast SDK load timeout');
+      resolve();
+    }, 8000);
   });
 }
 
@@ -198,7 +206,8 @@ export function useCast(): UseCastReturn {
         };
         return;
       } catch (err) {
-        if ((err as DOMException).name !== 'AbortError') {
+        const error = err as DOMException;
+        if (error.name !== 'AbortError' && error.name !== 'NotFoundError') {
           console.warn('Presentation API failed:', err);
         }
       }
