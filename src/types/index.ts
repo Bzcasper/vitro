@@ -44,7 +44,7 @@ export const STREAM_SERVERS: StreamServer[] = [
     },
     healthCheck: {
       url: 'http://10.0.0.21:2506',
-      timeout: 2000
+      timeout: 5000
     }
   },
   {

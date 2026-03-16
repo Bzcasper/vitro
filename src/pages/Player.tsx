@@ -337,14 +337,14 @@ export default function Player() {
               <div className="glass rounded-2xl p-4 space-y-3">
                 <h3 className="font-semibold text-white flex items-center gap-2">
                   <Tv className="w-4 h-4" />
-                  Cast to TV
+                  Cast to TCL TV
                 </h3>
                 <div className="text-sm text-muted-foreground space-y-2">
-                  <p>Click the cast button to stream to your TV:</p>
+                  <p>Streaming to TCL TV at 10.0.0.21:2506</p>
                   <ul className="list-disc list-inside space-y-1 text-xs">
-                    <li>Chromecast: Works with Google Cast-enabled devices</li>
-                    <li>Smart TV: Uses DLNA/Presentation API</li>
-                    <li>External: Opens in new tab for manual casting</li>
+                    <li>Click cast button to connect</li>
+                    <li>Uses Presentation API for direct TV connection</li>
+                    <li>Fallback: Open in new tab for manual casting</li>
                   </ul>
                 </div>
               </div>

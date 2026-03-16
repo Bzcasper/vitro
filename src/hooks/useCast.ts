@@ -181,16 +181,24 @@ export function useCast(): UseCastReturn {
     }
 
     // Method 2: Presentation API (DLNA-compatible, works with smart TVs)
+    // Also try to connect to TCL TV directly via local network
     if ('presentation' in navigator) {
       try {
+        // Try local TV address first if URL is localhost
+        let castUrl = url;
+        if (url.includes('localhost') || url.includes('127.0.0.1')) {
+          // Replace localhost with the actual TV address
+          castUrl = url.replace(/localhost|127\.0\.0\.1/g, '10.0.0.21');
+        }
+        
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const request = new (window as any).PresentationRequest([url]);
+        const request = new (window as any).PresentationRequest([castUrl]);
         presentationRef.current = request;
         const connection = await request.start();
         presentationRef.current = connection;
         setIsCasting(true);
         setCastMethod('presentation');
-        setCastDeviceName('Smart TV');
+        setCastDeviceName('TCL TV');
 
         connection.onclose = () => {
           presentationRef.current = null;

@@ -115,6 +115,14 @@ export function getStreamUrl(
     throw new Error('Invalid parameters for TV show stream');
   }
 
+  // If using local server (Pidegoen), ensure proper URL format
+  if (server.id === 'pidegoen' || url.includes('10.0.0.21:2506')) {
+    // Ensure URL ends with proper format for casting
+    if (!url.endsWith('/') && !url.includes('?')) {
+      url += '/';
+    }
+  }
+
   return { url, server };
 }
 
