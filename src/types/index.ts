@@ -31,19 +31,19 @@ export interface WatchProgress {
 
 export const STREAM_SERVERS: StreamServer[] = [
   {
-    id: 'localhost',
-    name: 'Local Server',
+    id: 'pidegoen',
+    name: 'Pidegoen',
     priority: 0,
-    baseUrl: 'http://localhost:2506',
-    movieUrl: (id: string) => `http://localhost:2506/movie/${id}`,
-    tvUrl: (id: string, s: number, e: number) => `http://localhost:2506/tv/${id}/${s}/${e}`,
+    baseUrl: 'http://10.0.0.21:2506',
+    movieUrl: (id: string) => `http://10.0.0.21:2506/movie/${id}`,
+    tvUrl: (id: string, s: number, e: number) => `http://10.0.0.21:2506/tv/${id}/${s}/${e}`,
     features: {
       autoplay: true,
       subtitles: true,
       quality: ['1080p', '720p', '480p']
     },
     healthCheck: {
-      url: 'http://localhost:2506',
+      url: 'http://10.0.0.21:2506',
       timeout: 2000
     }
   },
